@@ -1,0 +1,19 @@
+{
+  "description": "Firefox add-on generating a mouse movement graph for particular segment of inspectlet.com session recording",
+  "manifest_version": 2,
+  "name": "Inspectlet mouse movement graph",
+  "version": "0.0.1",
+  "homepage_url": "https://github.com/hckr/inspectlet-mouse-movement-graph",
+  "content_scripts": [
+    {
+      "matches": ["https://www.inspectlet.com/dashboard/watchsession/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "permissions": ["<all_urls>", "downloads", "storage"],
+  "applications": {
+    "gecko": {
+      "strict_min_version": "54.0"
+    }
+  }
+}
