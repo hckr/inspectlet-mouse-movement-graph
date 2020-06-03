@@ -1,15 +1,23 @@
+// <reference path="content.d.ts" />
+
+const AGGREGATION_RADIUS = 25;
+
 const buttons = document.querySelector('.actionbuttons');
 
 const downloadGraphElement = document.createElement('a');
 downloadGraphElement.title = 'Download mouse graph';
 downloadGraphElement.innerHTML = '<i class="fa fa-download"></i></a>';
+buttons.appendChild(downloadGraphElement);
 
 downloadGraphElement.onclick = async () => {
-  const data = await getJsonData();
-
-  console.log(data);
-
   try {
+    const data = aggregateCloseDataPoints(
+      await fetchAndPreprocessData(),
+      AGGREGATION_RADIUS
+    );
+
+    const max_ms = Math.max(...data.map(([ms]) => ms));
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -32,78 +40,135 @@ downloadGraphElement.onclick = async () => {
 
     ctx.drawWindow(iWindow, 0, 0, width, height, '#fff');
 
-    ctx.strokeStyle = 'red';
     ctx.font = '18px sans-serif';
 
     let i = 1,
-      prevX,
-      prevY,
-      prevTextI = i,
-      prevTextX,
-      prevTextY;
+      prev_x,
+      prev_y,
+      texts = [];
     for (const [ms, x, y] of data) {
-      if (
-        !(prevTextX || prevTextY) ||
-        Math.abs(prevTextX - x) > 50 ||
-        Math.abs(prevTextY - y) > 50
-      ) {
-        const text = `${i - prevTextI > 1 ? `${prevTextI + 1}–${i}` : i}`;
-        const { width: tw } = ctx.measureText(text);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.fillRect(x, y - 14, tw, 16);
-        ctx.fillStyle = 'magenta';
-        ctx.fillText(text, x, y);
-        prevTextI = i;
-        prevTextX = x;
-        prevTextY = y;
-      }
-
-      ctx.beginPath();
-      ctx.arc(x, y, 10, 0, 2 * Math.PI, false);
-      ctx.stroke();
-
-      if (prevX && prevY) {
+      if (prev_x && prev_y) {
         ctx.beginPath();
-        ctx.moveTo(prevX, prevY);
+        ctx.moveTo(prev_x, prev_y);
         ctx.lineTo(x, y);
+        ctx.strokeStyle = 'red';
         ctx.stroke();
       }
 
+      ctx.beginPath();
+      ctx.arc(x, y, AGGREGATION_RADIUS, 0, 2 * Math.PI, false);
+      ctx.fillStyle = `rgba(255, 0, 0, ${Math.round((ms / max_ms) * 10) / 10})`;
+      ctx.fill();
+      ctx.strokeStyle = 'red';
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, 2 * Math.PI, false);
+      ctx.fillStyle = 'magenta';
+      ctx.fill();
+
+      texts.push([`${i}; ${Math.round(ms / 10) / 100} s`, x, y]);
+
       i = i + 1;
-      prevX = x;
-      prevY = y;
+      prev_x = x;
+      prev_y = y;
+    }
+
+    for (const [text, x, y] of texts) {
+      const { width: tw } = ctx.measureText(text);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.fillRect(x, y - 14, tw, 16);
+      ctx.strokeStyle = 'white';
+      ctx.strokeRect(x, y - 14, tw, 16);
+      ctx.fillStyle = 'navy';
+      ctx.fillText(text, x, y);
     }
 
     window.open(canvas.toDataURL());
   } catch (err) {
     console.error(err);
+    alert(
+      `[inspectlet-mouse-movement-graph] Something went wrong :/
+
+      Try again?`
+    );
   }
 };
 
-buttons.appendChild(downloadGraphElement);
+/**
+ * @param {Array<[number, number, number]>} data
+ * @param {number} threshold
+ *
+ * @return {Promise<Array<[number, number, number]>>}
+ * Sequence of [duration_in_ms, mouse_pos_x, mouse_pos_y]
+ *
+ */
+function aggregateCloseDataPoints(data, threshold) {
+  if (data.length === 0) {
+    return [];
+  }
 
-async function getJsonData() {
+  const aggregated = [];
+
+  let candidates = [];
+
+  const aggregate = () => {
+    let sum_ms = 0,
+      sum_x = 0,
+      sum_y = 0;
+    for (const [ms, x, y] of candidates) {
+      sum_ms += ms;
+      sum_x += x;
+      sum_y += y;
+    }
+    aggregated.push([
+      sum_ms,
+      sum_x / candidates.length,
+      sum_y / candidates.length,
+    ]);
+    candidates = [];
+  };
+
+  for (const current of data) {
+    const [, x, y] = current;
+    if (candidates.length !== 0) {
+      const [, cand_x, cand_y] = candidates[0];
+      if (
+        Math.abs(cand_x - x) > threshold &&
+        Math.abs(cand_y - y) > threshold
+      ) {
+        aggregate();
+      }
+    }
+    candidates.push(current);
+  }
+
+  aggregate();
+
+  return aggregated;
+}
+
+/**
+ *
+ * @return {Promise<Array<[number, number, number]>>}
+ * Sequence of [duration_in_ms, mouse_pos_x, mouse_pos_y]
+ */
+async function fetchAndPreprocessData() {
   // wid, sid, rid are global
   const { wid, rid } = window.wrappedJSObject;
 
-  try {
-    const data = await (
-      await content.fetch(
-        `https://www.inspectlet.com/dashboard/pdata?wid=${wid}&rid=${rid}`
-      )
-    ).json();
+  const data = await (
+    await content.fetch(
+      `https://www.inspectlet.com/dashboard/pdata?wid=${wid}&rid=${rid}`
+    )
+  ).json();
 
-    return data
-      .map(str => str.split(','))
-      .filter(([op]) => op === 'mr')
-      .map(([, timestamp, , , x, y]) => [+timestamp, +x, +y])
-      .filter(([, x, y]) => !isNaN(x) && !isNaN(y))
-      .reduce((acc, [timestamp, x, y], i, arr) => {
-        const [prev_timestamp] = arr[i - 1] || [0];
-        return [...acc, [timestamp - prev_timestamp, x, y]];
-      }, []);
-  } catch (err) {
-    console.error('[inspectlet-mouse-movement-graph]', err);
-    alert('[inspectlet-mouse-movement-graph] Something went wrong :/');
-  }
+  return data
+    .map(str => str.split(','))
+    .filter(([op]) => op === 'mr')
+    .map(([, timestamp, , , x, y]) => [+timestamp, +x, +y])
+    .filter(([, x, y]) => !isNaN(x) && !isNaN(y))
+    .reduce((acc, [timestamp, x, y], i, arr) => {
+      const [prev_timestamp] = arr[i - 1] || [0];
+      return [...acc, [timestamp - prev_timestamp, x, y]];
+    }, []);
 }
