@@ -1,5 +1,3 @@
-// <reference path="content.d.ts" />
-
 const AGGREGATION_RADIUS = 25;
 
 const buttons = document.querySelector('.actionbuttons');
@@ -7,6 +5,7 @@ const buttons = document.querySelector('.actionbuttons');
 const downloadGraphElement = document.createElement('a');
 downloadGraphElement.title = 'Download mouse graph';
 downloadGraphElement.innerHTML = '<i class="fa fa-download"></i></a>';
+
 buttons.appendChild(downloadGraphElement);
 
 downloadGraphElement.onclick = async () => {
