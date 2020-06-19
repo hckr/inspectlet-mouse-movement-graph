@@ -2,9 +2,19 @@ const AGGREGATION_RADIUS = 25;
 
 const buttons = document.querySelector('.actionbuttons');
 
+const downloadCsv = document.createElement('a');
+downloadCsv.title = 'Download CSV';
+downloadCsv.innerHTML = '<i class="fa fa-file-text-o"></i>';
+
+buttons.appendChild(downloadCsv);
+
+downloadCsv.onclick = () => {
+  download(getDataUrl(), 'csv');
+};
+
 const downloadGraphElement = document.createElement('a');
 downloadGraphElement.title = 'Download mouse graph';
-downloadGraphElement.innerHTML = '<i class="fa fa-download"></i></a>';
+downloadGraphElement.innerHTML = '<i class="fa fa-download"></i>';
 
 buttons.appendChild(downloadGraphElement);
 
@@ -20,24 +30,24 @@ downloadGraphElement.onclick = async () => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
-    const { contentWindow: iWindow } = document.querySelector('#yoursite');
+    // const { contentWindow: iWindow } = document.querySelector('#yoursite');
 
-    try {
-      const insp_tracker = iWindow.document.getElementById('insp_tracker');
-      const insp_cursor = iWindow.document.getElementById('insp_cursor');
-      insp_tracker.parentNode.removeChild(insp_tracker);
-      insp_cursor.parentNode.removeChild(insp_cursor);
-    } catch (err) {}
+    // try {
+    //   const insp_tracker = iWindow.document.getElementById('insp_tracker');
+    //   const insp_cursor = iWindow.document.getElementById('insp_cursor');
+    //   insp_tracker.parentNode.removeChild(insp_tracker);
+    //   insp_cursor.parentNode.removeChild(insp_cursor);
+    // } catch (err) {}
 
-    const {
-      offsetWidth: width,
-      offsetHeight: height,
-    } = iWindow.document.documentElement;
+    // const {
+    //   offsetWidth: width,
+    //   offsetHeight: height,
+    // } = iWindow.document.documentElement;
 
-    canvas.width = width;
-    canvas.height = height;
+    // canvas.width = width;
+    // canvas.height = height;
 
-    ctx.drawWindow(iWindow, 0, 0, width, height, '#fff');
+    // ctx.drawWindow(iWindow, 0, 0, width, height, '#fff');
 
     ctx.font = '18px sans-serif';
 
@@ -82,7 +92,7 @@ downloadGraphElement.onclick = async () => {
       ctx.fillText(text, x, y);
     }
 
-    window.open(canvas.toDataURL());
+    download(canvas.toDataURL(), 'png');
   } catch (err) {
     console.error(err);
     alert(
@@ -152,14 +162,7 @@ function aggregateCloseDataPoints(data, threshold) {
  * Sequence of [duration_in_ms, mouse_pos_x, mouse_pos_y]
  */
 async function fetchAndPreprocessData() {
-  // wid, sid, rid are global
-  const { wid, rid } = window.wrappedJSObject;
-
-  const data = await (
-    await content.fetch(
-      `https://www.inspectlet.com/dashboard/pdata?wid=${wid}&rid=${rid}`
-    )
-  ).json();
+  const data = await (await content.fetch(getDataUrl())).json();
 
   return data
     .map(str => str.split(','))
@@ -170,4 +173,25 @@ async function fetchAndPreprocessData() {
       const [prev_timestamp] = arr[i - 1] || [0];
       return [...acc, [timestamp - prev_timestamp, x, y]];
     }, []);
+}
+
+function getDataUrl() {
+  // wid, sid, rid are global
+  const {
+    wid,
+    rid,
+    location: { protocol },
+  } = window.wrappedJSObject;
+
+  return `${protocol}//www.inspectlet.com/dashboard/pdata?wid=${wid}&rid=${rid}`;
+}
+
+function download(url, ext) {
+  // wid, sid, rid are global
+  const { wid, rid } = window.wrappedJSObject;
+
+  browser.runtime.sendMessage({
+    url,
+    filename: `${wid}_${rid}.${ext}`,
+  });
 }

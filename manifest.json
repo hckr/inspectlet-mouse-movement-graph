@@ -6,11 +6,14 @@
   "homepage_url": "https://github.com/hckr/inspectlet-mouse-movement-graph",
   "content_scripts": [
     {
-      "matches": ["https://www.inspectlet.com/dashboard/watchsession/*"],
+      "matches": ["*://www.inspectlet.com/dashboard/watchsession/*"],
       "js": ["content.js"]
     }
   ],
-  "permissions": ["<all_urls>", "downloads", "storage"],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "permissions": ["<all_urls>", "downloads"],
   "applications": {
     "gecko": {
       "strict_min_version": "54.0"
