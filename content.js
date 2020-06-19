@@ -30,24 +30,24 @@ downloadGraphElement.onclick = async () => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
-    // const { contentWindow: iWindow } = document.querySelector('#yoursite');
+    const { contentWindow: iWindow } = document.querySelector('#yoursite');
 
-    // try {
-    //   const insp_tracker = iWindow.document.getElementById('insp_tracker');
-    //   const insp_cursor = iWindow.document.getElementById('insp_cursor');
-    //   insp_tracker.parentNode.removeChild(insp_tracker);
-    //   insp_cursor.parentNode.removeChild(insp_cursor);
-    // } catch (err) {}
+    try {
+      const insp_tracker = iWindow.document.getElementById('insp_tracker');
+      const insp_cursor = iWindow.document.getElementById('insp_cursor');
+      insp_tracker.parentNode.removeChild(insp_tracker);
+      insp_cursor.parentNode.removeChild(insp_cursor);
+    } catch (err) {}
 
-    // const {
-    //   offsetWidth: width,
-    //   offsetHeight: height,
-    // } = iWindow.document.documentElement;
+    const {
+      offsetWidth: width,
+      offsetHeight: height,
+    } = iWindow.document.documentElement;
 
-    // canvas.width = width;
-    // canvas.height = height;
+    canvas.width = width;
+    canvas.height = height;
 
-    // ctx.drawWindow(iWindow, 0, 0, width, height, '#fff');
+    ctx.drawWindow(iWindow, 0, 0, width, height, '#fff');
 
     ctx.font = '18px sans-serif';
 
