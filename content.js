@@ -1,3 +1,5 @@
+'use strict';
+
 const AGGREGATION_RADIUS = 25;
 
 const buttons = document.querySelector('.actionbuttons');
@@ -8,8 +10,10 @@ downloadCsv.innerHTML = '<i class="fa fa-file-text-o"></i>';
 
 buttons.appendChild(downloadCsv);
 
-downloadCsv.onclick = () => {
-  download(getDataUrl(), 'csv');
+downloadCsv.onclick = async () => {
+  const csv = await fetchDataAndConvertToCsv();
+  const dataUri = `data:text/csv,${encodeURIComponent(csv)}`;
+  download(dataUri, 'csv');
 };
 
 const downloadGraphElement = document.createElement('a');
@@ -173,6 +177,12 @@ async function fetchAndPreprocessData() {
       const [prev_timestamp] = arr[i - 1] || [0];
       return [...acc, [timestamp - prev_timestamp, x, y]];
     }, []);
+}
+
+async function fetchDataAndConvertToCsv() {
+  const data = await (await content.fetch(getDataUrl())).json();
+  console.log(data);
+  return data.join('\n');
 }
 
 function getDataUrl() {
