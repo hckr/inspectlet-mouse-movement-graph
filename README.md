@@ -1,6 +1,8 @@
-# inspectlet-mouse-movement-graph
+# Mouse movement graph and csv download for Incpectlet.com
 
-Firefox add-on generating a mouse movement graph for particular segment of inspectlet.com session recording
+Firefox add-on generating a mouse movement graph for particular segment of inspectlet.com session recording.
+
+Also offers simple CSV data download.
 
 ## How to use
 
